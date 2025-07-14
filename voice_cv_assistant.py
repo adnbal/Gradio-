@@ -1,43 +1,38 @@
-# voice_cv_assistant.py
-
 import gradio as gr
 import openai
 import os
+from dotenv import load_dotenv
 
-# Set OpenAI key from environment or replace with your key directly
-openai.api_key = os.getenv("OPENAI_API_KEY")  # or replace with: "sk-..."
+# Load .env variables (OpenAI API key)
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 🔁 Voice input → Whisper → GPT-4 reply
 def respond_to_voice(audio_path):
     try:
-        # Transcribe voice using Whisper
-        transcript = openai.Audio.transcribe("whisper-1", audio_path)
-        user_input = transcript["text"]
-        
-        # Use GPT-4 for reply
+        # Step 1: Transcribe audio to text
+        transcript = openai.Audio.transcribe("whisper-1", audio_path)["text"]
+
+        # Step 2: Generate GPT-4 response
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful AI assistant for CV improvement, job matching, and career advice."},
-                {"role": "user", "content": user_input}
+                {"role": "system", "content": "You are a helpful AI voice assistant that answers questions about CV improvement, job applications, career advice in data science, AI, and business analytics."},
+                {"role": "user", "content": transcript}
             ],
             temperature=0.7
         )
-        reply = response["choices"][0]["message"]["content"]
-        return f"🗣️ You said: {user_input}\n\n🤖 Assistant: {reply}"
+
+        # Return combined result
+        return f"🗣️ You said: {transcript}\n\n🤖 Assistant: {response['choices'][0]['message']['content']}"
 
     except Exception as e:
         return f"❌ Error: {str(e)}"
 
-# 🎙️ Build the Gradio Interface
-iface = gr.Interface(
+# Launch Gradio UI
+gr.Interface(
     fn=respond_to_voice,
     inputs=gr.Audio(source="microphone", type="filepath", label="🎤 Speak your question"),
-    outputs=gr.Textbox(label="💬 Assistant Response"),
-    title="🎙️ AI Voice Career Assistant",
-    description="Ask anything about your CV, job fit, or AI career direction. Powered by OpenAI GPT-4 + Whisper."
-)
-
-# 🟢 Launch
-if __name__ == "__main__":
-    iface.launch()
+    outputs=gr.Textbox(label="💬 AI Response"),
+    title="🎙️ Voice Career Assistant",
+    description="Speak your question about CV, AI careers, data science, or analytics roles. This assistant will transcribe and respond using GPT-4."
+).launch()
